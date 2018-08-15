@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+    <!-- 1.配置securityManager(核心)-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="cacheManager" ref="cacheManager"/>
+        <property name="realm" ref="myRealm" />
+    </bean>
+    <!-- 2.配置CacheManager -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:cache/ehcache.xml"/>
+    </bean>
+    <!--  3.配置Realm
+    	  3.1，直接实现了Realm接口的bean-->
+    <bean id="myRealm" class="cn.szhtwl.utils.shiro.myRealm">
+        <!-- 配置加密算法 -->
+       <!-- <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <property name="hashAlgorithmName" value="MD5"></property>
+                <property name="hashIterations" value="1024"></property>
+            </bean>
+        </property>-->
+    </bean>
+
+    <!-- 5.启用IOC容器中使用shiro 的注解，但必须配置lifecycleBeanPostProcessor -->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+          depends-on="lifecycleBeanPostProcessor"/>
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+
+    <!-- 入口 -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <property name="loginUrl" value="/login.jsp"/>
+        <property name="successUrl" value="/index.jsp"/>
+        <!-- 如果没有对应的权限，跳转达到unauthorizedUrl设置的页面 -->
+        <property name="unauthorizedUrl" value="/unauthorized.jsp"/>
+        <!-- 重新配置保护页面 -->
+        <property name="filterChainDefinitionMap" ref="filterChainDefinitionMap"></property>
+        <!-- 配置哪些页面需要受保护，以及访问这些页面需要的权限
+                anno: 可以匿名访问
+                authc:需要登录才能访问
+                logout:注销
+                roles:角色过滤器
+         <property name="filterChainDefinitions">
+             <value>
+                 /login.jsp = anon
+                 /shiro/login = anon
+                 /shiro/logout = logout
+
+                  /user.jsp = roles[user]
+                  /admin.jsp= roles[admin]
+                 # everything else requires authentication:
+                    /** = authc
+             </value>
+         </property> -->
+    </bean>
+    <!-- 配置filterChainDefinitionMap
+    	通过实例工厂方法构建map
+    	再来配置实例
+    -->
+    <bean id="filterChainDefinitionMapBuilder" class="cn.szhtwl.utils.shiro.FilterChainDefinitionMapBuilder"/>
+
+    <bean id="filterChainDefinitionMap" factory-bean="filterChainDefinitionMapBuilder" factory-method="build"/>
+</beans>
